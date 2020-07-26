@@ -1,0 +1,335 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Business Understanding
+
+You are a Data analyst at Carrefour Kenya and are currently undertaking a project that will inform the marketing department on the most relevant marketing strategies that will result in the highest no. of sales (total price including tax). Your project has been divided into four parts where you'll explore a recent marketing dataset by performing various unsupervised learning techniques and later providing recommendations based on your insights.
+
+
+# Specifying the question 
+
+### Part 1: Dimensionality Reduction
+
+This section of the project entails reducing your dataset to a low dimensional dataset using the t-SNE algorithm or PCA. You will be required to perform your analysis and provide insights gained from your analysis.
+
+Dataset: [Link (Links to an external site.)]
+
+### Part 2: Feature Selection
+
+This section requires you to perform feature selection through the use of the unsupervised learning methods learned earlier this week. You will be required to perform your analysis and provide insights on the features that contribute the most information to the dataset.
+
+Dataset: [Link (Links to an external site.)]
+
+### Part 3: Association Rules
+
+This section will require that you create association rules that will allow you to identify relationships between variables in the dataset. You are provided with a separate dataset that comprises groups of items that will be associated with others. Just like in the other sections, you will also be required to provide insights for your analysis.
+
+Dataset: [Link (Links to an external site.)]
+
+### Part 4: Anomaly Detection
+
+You have also been requested to check whether there are any anomalies in the given sales dataset. The objective of this task being fraud detection.
+
+Dataset: [Link (Links to an external site.)]
+
+# Metrics for success
+
+Dataset with reduced dimensions
+Get the features that contribute the most information
+Provide association rules for the store
+Check for fraud detection
+
+# Experimental design
+Problem definition
+Data sourcing
+Loading the data
+Data cleaning
+Exploratory Data Analysis (Univariate, Bivariate & Multivariate)
+Implement the solution
+Challenge the solution
+Follow up questions
+```{r}
+install.packages("dplyr")
+library(dplyr)
+install.packages("tidyverse")
+library(tidyverse)
+install.packages("ggplot2")
+library(ggplot2)
+install.packages("devtools",dependencies=TRUE)
+library(devtools) 
+install_github("vqv/ggbiplot") 
+library(ggbiplot)
+install.packages("arules") 
+library(arules)
+install.packages("arulesViz")
+library(arulesViz)
+install.packages("Rtsne")
+library(Rtsne)
+install.packages("anomalize") 
+library(anomalize)
+install.packages("caret")
+library(caret)
+install.packages("corrplot")
+library(corrplot)
+```
+
+
+
+
+
+
+```{r}
+# load the dataset
+df <- read.csv("Supermarket_Dataset_1 - Sales Data.csv")
+```
+
+
+```{r}
+#view the head
+head(df)
+
+```
+
+```{r}
+#structure of the dataset
+str(df)
+```
+
+```{r}
+#check the dimensions of the dataset
+dim(df)
+```
+```{r}
+#summary statistics
+summary(df)
+
+```
+```{r}
+
+#combine the date and time column
+ 
+df$Date_time = paste(df$Date,df$Time)
+
+#converting the new column to a string of characters
+df$Date_time = as.character(df$Date_time)
+
+#converting the Date_time column  to date_time data type
+
+df$Date_time = strptime(df$Date_time, "%m/%d/%Y %M:%S")
+
+#confirm if its has changed
+
+str(df)
+```
+
+# Data Cleaning
+```{r}
+#check for null values
+colSums(is.na(df))
+```
+no null values
+
+```{r}
+#check for duplicated rows
+
+duplicated_rows<- df[duplicated(df), ]
+duplicated_rows
+```
+
+no duplicates
+
+```{r}
+#visulaize outliers
+numerical_col<-df[,  c(6, 7, 8, 12, 13, 14, 15, 16)]
+boxplot(numerical_col)
+```
+```{r}
+library(Hmisc)
+hist(numerical_col)
+```
+
+```{r}
+#convertcharacter data type to integers
+df$Branch_num<-as.integer(as.factor(df$Branch))
+df$Branch_num
+# Customer Type
+df$Customer_num<-as.integer(as.factor(df$Customer.type))
+df$Customer_num
+# Gender
+df$Gender_num<-as.integer(as.factor(df$Gender))
+df$Gender_num
+# Product.line
+df$Product_Line_num<-as.integer(as.factor(df$Product.line))
+df$Product_Line_num
+#Payment
+df$Payment_num<-as.integer(as.factor(df$Payment))
+df$Payment_num
+                                                                        
+```
+)
+```{r}
+df_new<- df[, c(-1, -2, -3, -4, -5, -9, -10, -11, -13, -17)]
+head(df_new)
+```
+## Dimensionality Reduction
+
+```{r}
+#apply pca
+pca_comp <- prcomp(df_new, center = TRUE, scale. = TRUE)
+
+summary(pca_comp)
+
+```
+
+the first principal component account for 40% of the information in the dataset
+pc1 to pc8 account for 99% of the total information in the dataset
+```{r}
+#visualize
+plot(pca_comp)
+```
+our graph shows that the first pca component reults to the most information in the dataset
+
+```{r}
+ggbiplot(pca_comp)
+```
+
+Rating, customer type, payment and gender are among the those attributes that highly contribute to PCA 1
+
+## Feature Scaling
+```{r}
+tsne <- Rtsne(df_new, dims =2, perplexity = 30, verbosity = TRUE,
+      max_iter = 500)
+
+```
+
+```{r}
+df_new$Rating_numer <- as.integer(df_new$Rating)
+
+labels<-df_new$Rating_num
+df_new$Rating_numer<-as.factor(df_new$Rating_numer)
+
+
+colors = rainbow(length(df_new$Rating_numer))
+names(colors) = unique(df_new$Rating_numer)
+
+plot(tsne$Y, t='n', main="tsne")
+text(tsne$Y, labels=df_new$Rating_numer, col=colors[df_new$Rating_numer])
+```
+## Feature Selection
+
+```{r}
+#get te correlation matrix
+df_new1<- df_new[, c(1:12)]
+corrMatrix <- cor(df_new1)
+
+#get attributes that are highly correlated
+highlyCorr <- findCorrelation(corrMatrix, cutoff=0.75)
+highlyCorr
+
+names(df_new1[,highlyCorr])
+
+```
+cogs, total and tax are highly correlated
+
+## Association Rules
+```{r}
+
+# read the data as with class transactions
+  
+
+path <-"Supermarket_Sales_Dataset II.csv"
+
+df_transactions <- read.transactions(path)
+df_transactions
+```
+
+
+
+```{r}
+inspect(df_transactions[1:5])
+```
+
+
+```{r}
+par(mfrow = c(1, 2))
+# plot the frequency of items
+itemFrequencyPlot(df_transactions, topN = 10,col="darkgreen")
+```
+
+
+
+```{r}
+rules <- apriori (df_transactions, parameter = list(supp = 0.001, conf = 0.8))
+
+```
+
+
+
+```{r}
+# Building apriori models altering support and confidence values
+rule_2 <- apriori (df_transactions,parameter = list(supp = 0.002, conf = 0.8)) 
+
+rule_3 <- apriori (df_transactions, parameter = list(supp = 0.001, conf = 0.6)) 
+
+rule_2
+
+rule_3
+```
+rules increases when support and confidence decreases
+
+
+```{r}
+summary(rules)
+```
+```{r}
+inspect(rules[1:15])
+```
+```{r}
+rules<-sort(rules, by="confidence", decreasing=TRUE)
+inspect(rules[1:5])
+```
+if someone buys youghurt, he/she is 100 % likely to buy cookies
+
+
+
+## Anomaly Detection
+
+```{r}
+df_anomaly<- read.csv('Supermarket_Sales_Forecasting - Sales.csv')
+head(df_anomaly)
+```
+
+```{r}
+
+# Collect our time series data
+
+tidyverse_cran_downloads
+```
+
+
+
+```{r}
+#converting the data frame to tibble
+
+anomaly_tb <- as_tibble(anomaly_df)
+head(anomaly_tb)
+```
+```{r}
+
+anomaly_tb <- anomaly_tb %>%
+                    tibbletime::as_tbl_time(index = Date)
+```
+
+
+
+```{r}
+tidyverse_cran_downloads %>%
+    time_decompose(count) %>%
+    anomalize(remainder) %>%
+    time_recompose() %>%
+    plot_anomalies(time_recomposed = TRUE, ncol = 3, alpha_dots = 0.5)
+```
+
+
